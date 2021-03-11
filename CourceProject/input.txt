@@ -1,0 +1,18 @@
+human1	name1	description1	1990	2099	human2	human3 human4 human5 human6
+human2	name2	description2	1995	2100	human1	human3 human4 human5 human6
+human3	name3	description3	2000	2101	None
+human4	name4	description4	2005	2102	None
+human5	name5	description5	2010	2103	human7	human8 human9
+human6	name6	description6	2015	2104	None
+human7	name7	description7	2020	2105	human5	human8 human9
+human8	name8	description8	2025	2106	human10	human11
+human9	name9	description9	2030	2107	None
+human10	name10	description10	2035	2108	human8	human11
+human11	name11	description11	2040	2109	human12	human13 human14
+human12	name12	description12	2045	2110	human11	human13 human14
+human13	name13	description13	2050	2111	human16	human17
+human14	name14	description14	2055	2112	human15
+human15	name15	description15	2060	2113	human14
+human16	name16	description16	2065	2114	human13	human17
+human17	name17	description17	2070	2115	human18
+human18	name18	description18	2075	2116	human17
