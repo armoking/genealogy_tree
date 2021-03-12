@@ -150,14 +150,13 @@ class Connections:
         depth = [0 for _ in range(data_size)]
         index_of_human = dict((element, index) for index, element in enumerate(data))
 
-        for index, element in enumerate(data):
-
-            if element.pair is not None:
-                depth[index_of_human[element.pair]] = depth[index] = \
-                    max(depth[index], depth[index_of_human[element.pair]])
-
-            for child in element.children:
-                depth[index_of_human[child]] = max(depth[index_of_human[child]], depth[index] + 1)
+        for _ in range(len(data)):
+            for index, element in enumerate(data):
+                if element.pair is not None:
+                    depth[index_of_human[element.pair]] = depth[index] = \
+                        max(depth[index], depth[index_of_human[element.pair]])
+                for child in element.children:
+                    depth[index_of_human[child]] = max(depth[index_of_human[child]], depth[index] + 1)
 
         depths_elements = [[] for _ in range(max(depth) + 1)]
 

@@ -66,7 +66,7 @@ def init_database():
     main_database.create_tables([HumanModel, RelationTable, TimeEvent, RelativeTableEvent])
 
     # reading the default data:
-    data = open('input.txt').read().split('\n')
+    data = open('input.txt', encoding='utf-8').read().split('\n')
     human_list = [None for _ in range(len(data))]
     id_human_to_index = dict()
     id_human_to_index['None'] = None

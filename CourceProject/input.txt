@@ -1,5 +1,5 @@
-human1	name1	description1	1990	2099	human2	human3 human4 human5 human6
-human2	name2	description2	1995	2100	human1	human3 human4 human5 human6
+human1	путин	description1	1990	2099	human2	human3 human4 human5 human6
+human2	мутин	description2	1995	2100	human1	human3 human4 human5 human6
 human3	name3	description3	2000	2101	None
 human4	name4	description4	2005	2102	None
 human5	name5	description5	2010	2103	human7	human8 human9
