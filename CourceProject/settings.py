@@ -1,1 +1,2 @@
 DATABASE_LOCATION = 'main_database.db'
+LINEARLY_DISTRIBUTED = True

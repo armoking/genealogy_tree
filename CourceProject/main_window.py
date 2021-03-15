@@ -1,10 +1,10 @@
 from PyQt5 import Qt
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QBrush, QPen, QFont, QCursor
-from PyQt5.QtGui import QPainterPath, QPixmap, QColor
+from PyQt5.QtGui import QBrush, QPen, QFont, QCursor, QColor
 from PyQt5.QtWidgets import QMainWindow, QGraphicsScene, QGraphicsView, QLabel, QWidget, QVBoxLayout, QHBoxLayout, \
-    QGraphicsSceneMouseEvent, QTableView, QPushButton, QMenu, QApplication, QTextEdit, QErrorMessage, QRadioButton
+    QGraphicsSceneMouseEvent, QTableView, QPushButton, QMenu, QApplication, QTextEdit, QErrorMessage, QRadioButton, \
+    QGraphicsTextItem
 
 import human_and_time_database
 
@@ -14,33 +14,80 @@ class MainWindow(QMainWindow):
         def __init__(self, parent=None):
             super().__init__(parent)
             self.parent = parent
+            self.prev_active_rect = None
+            self.active_elements = []
+
+        def mouseMoveEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+            try:
+                good = False
+                for _event, event_object in self.parent.events:
+                    if _event.x1 <= event.scenePos().x() <= _event.x2 \
+                            and _event.y1 <= event.scenePos().y() <= _event.y2:
+                        if self.prev_active_rect is not None:
+                            self.prev_active_rect.setBrush(QBrush(QColor.fromRgb(250, 240, 240)))
+                            self.prev_active_rect = None
+                        event_object.setBrush(QBrush(Qt.green))
+                        self.prev_active_rect = event_object
+                        good = True
+                if not good and self.prev_active_rect is not None:
+                    self.prev_active_rect.setBrush(QBrush(QColor.fromRgb(250, 240, 240)))
+                    self.prev_active_rect = None
+            except Exception as e:
+                print(e)
 
         def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
-            if event.button() == 2:
-                current_x, current_y = event.scenePos().x(), event.scenePos().y()
+            try:
+                print('here bitch')
+                for element in self.active_elements:
+                    element.setBrush(QBrush(QColor.fromRgb(240, 240, 250)))
+            except Exception as exception:
+                print('error with a brush in mousePressEvent in MainScene:', exception)
+            print('started')
+            try:
+                if event.button() == 2:
+                    current_x, current_y = event.scenePos().x(), event.scenePos().y()
 
-                for rect, object_rect in self.parent.rectangles:
-                    if rect.x1 <= current_x <= rect.x2 and \
-                            rect.y1 <= current_y <= rect.y2:
+                    for rect, object_rect in self.parent.rectangles:
                         try:
-                            context_menu = QMenu()
+                            if rect.x1 <= current_x <= rect.x2 and \
+                                    rect.y1 <= current_y <= rect.y2:
+                                try:
+                                    context_menu = QMenu()
 
-                            history = context_menu.addAction('history')
-                            action = context_menu.exec(QCursor().pos())
+                                    history = context_menu.addAction('history')
+                                    action = context_menu.exec(QCursor().pos())
 
-                            if action == history:
-                                rect.widget = QWidget()
-                                rect.widget.setWindowTitle('Biography of {}'.format(rect.name))
-                                layout = QHBoxLayout()
-                                label = QLabel()
-                                label.setText(rect.description)
-                                layout.addWidget(label)
-                                rect.widget.setLayout(layout)
-                                rect.widget.setGeometry(QCursor().pos().x(), QCursor().pos().y(), 500, 200)
-                                rect.widget.show()
+                                    if action == history:
+                                        rect.widget = QWidget()
+                                        rect.widget.setWindowTitle('Biography of {}'.format(rect.name))
+                                        layout = QHBoxLayout()
+                                        label = QLabel()
+                                        label.setText(rect.description)
+                                        layout.addWidget(label)
+                                        rect.widget.setLayout(layout)
+                                        rect.widget.setGeometry(QCursor().pos().x(), QCursor().pos().y(), 500, 200)
+                                        rect.widget.show()
+
+                                except Exception as exception:
+                                    print(exception)
 
                         except Exception as exception:
                             print(exception)
+                elif event.button() == 1:
+                    current_x, current_y = event.scenePos().x(), event.scenePos().y()
+                    for _event, event_object in self.parent.events:
+                        if _event.x1 <= current_x <= _event.x2 and _event.y1 <= current_y <= _event.y2:
+                            for _rect, object_rect in self.parent.rectangles:
+                                year_from = int(_rect.years.split()[0])
+                                year_to = int(_rect.years.split()[2])
+                                if year_from <= int(_event.years) <= year_to:
+                                    object_rect.setBrush(QBrush(QColor.fromRgb(200, 200, 240)))
+                                    self.active_elements.append(object_rect)
+                    pass
+
+            except Exception as e:
+                print(e)
+            print('finished')
 
     def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
         import sys
@@ -60,8 +107,10 @@ class MainWindow(QMainWindow):
         self.scene = self.MainScene(self)
 
         self.graphics_view = QGraphicsView(self.scene)
+        self.graphics_view.setMouseTracking(True)
         self.graphics_view.setFixedSize(900, 900)
         self.setMouseTracking(True)
+        self.events = []
 
         layout.addWidget(self.graphics_view)
 
@@ -84,8 +133,53 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(w)
 
-        self.lines = []
-        self.rectangles = []
+        self.scale = 1
+        self.db_widget = None
+        self.add_element_widget = None
+        self.remove_element_widget = None
+        self.add_connection_widget = None
+        self.remove_connection_widget = None
+
+    def recreate(self):
+        super().__init__()
+        self.setWindowTitle('Genealogy tree')
+        self.setGeometry(500, 50, 1000, 900)
+        self.view = QTableView()
+
+        layout = QHBoxLayout()
+
+        w = QWidget(self)
+        w.setLayout(layout)
+
+        self.scene = self.MainScene(self)
+
+        self.graphics_view = QGraphicsView(self.scene)
+        self.graphics_view.setMouseTracking(True)
+        self.graphics_view.setFixedSize(900, 900)
+        self.setMouseTracking(True)
+        self.events = []
+
+        layout.addWidget(self.graphics_view)
+
+        database_layout = QVBoxLayout()
+        layout.addLayout(database_layout)
+
+        font = QFont('Times')
+        font.setPixelSize(20)
+        change_tree_structure_button = QPushButton('change structure of the tree')
+        change_tree_structure_button.setFixedSize(300, 150)
+        change_tree_structure_button.setFont(font)
+        rebuild_tree_button = QPushButton('rebuild tree')
+        rebuild_tree_button.setFixedSize(300, 150)
+        rebuild_tree_button.setFont(font)
+        database_layout.addWidget(change_tree_structure_button)
+        database_layout.addWidget(rebuild_tree_button)
+
+        change_tree_structure_button.clicked.connect(self.change_tree_structure)
+        rebuild_tree_button.clicked.connect(self.rebuild_tree)
+
+        self.setCentralWidget(w)
+
         self.scale = 1
         self.db_widget = None
         self.add_element_widget = None
@@ -284,7 +378,6 @@ class MainWindow(QMainWindow):
                     message.setWindowTitle('Input data error')
                     message.showMessage('Cant create a connection between human and himself')
                     return
-                print('okay')
                 if spouse_connection:
                     all_connections = human_and_time_database.RelationTable.select()
 
@@ -397,7 +490,6 @@ class MainWindow(QMainWindow):
                         message.showMessage('Connection already exists')
                         return
 
-                    print(graph[human_id2])
                     if graph[human_id2][1] is not None and graph[human_id2][2] is not None:
                         message = QErrorMessage(self)
                         message.setWindowTitle('Input data error')
@@ -510,7 +602,7 @@ class MainWindow(QMainWindow):
 
         remove_connection_widget.setLayout(layout)
         remove_connection_widget.show()
-        print('okay')
+
         self.remove_connection_widget = remove_connection_widget
 
     def apply_button_operation_remove_connection(self):
@@ -518,7 +610,7 @@ class MainWindow(QMainWindow):
         name2 = self.remove_connection_widget.layout().itemAt(1).layout().itemAt(1).widget().toPlainText()
         spouse_connection = self.remove_connection_widget.layout().itemAt(1).layout().itemAt(2).layout().itemAt(
             0).widget().isChecked()
-        print(name1, name2)
+
         try:
             if name1 and name2:
                 human_1 = human_and_time_database.HumanModel.select().where(
@@ -650,7 +742,6 @@ class MainWindow(QMainWindow):
             human_and_time_database.build_tree_from_database(self)
         except Exception as e:
             print(e)
-        print('CHANGE')
 
     def keyPressEvent(self, a0: QtGui.QKeyEvent) -> None:
         if a0.key() == 43:  # plus -> zoom in
@@ -660,27 +751,31 @@ class MainWindow(QMainWindow):
             self.graphics_view.scale(5 / 6, 5 / 6)
             self.scale *= 5 / 6
         elif a0.key() == 61:  # equal -> reset zoom
-            print(self.scale)
             self.graphics_view.scale(1 / self.scale, 1 / self.scale)
             self.scale = 1
 
-    def draw_rectangle(self, rect, pen=QPen(Qt.black, 8, Qt.SolidLine), brush=QBrush(QColor.fromRgb(220, 214, 240))):
+    def draw_rectangle(self, rect, pen=QPen(Qt.black, 8, Qt.SolidLine), brush=QBrush(QColor.fromRgb(240, 240, 255))):
         object_rect = self.scene.addRect(rect.x1, rect.y1, rect.x2 - rect.x1, rect.y2 - rect.y1, pen, brush)
 
         self.rectangles.append((rect, object_rect))
 
-        path = QPainterPath()
+        text_name = QGraphicsTextItem(rect.name)
+        text_years = QGraphicsTextItem(rect.years)
+        text_name.setPos(rect.x1 + 15, rect.y1 + 15)
+        text_years.setPos(rect.x1 + 15, rect.y1 + 70)
         font = QFont()
+        font.setBold(False)
         font.setPixelSize(35)
+        text_name.setFont(font)
+        text_years.setFont(font)
 
-        path.addText(rect.x1 + 5, rect.y1 + 35, font, rect.name)
-        path.addText(rect.x1 + 5, rect.y1 + 80, font, rect.years)
-        self.scene.addPath(path)
+        self.scene.addItem(text_name)
+        self.scene.addItem(text_years)
 
     def relax(self):
         kx = self.graphics_view.size().width() / max(1, self.graphics_view.sceneRect().width())
         ky = self.graphics_view.height() / max(1, self.graphics_view.sceneRect().height())
-        k = min(kx, ky) * 0.95
+        k = min(kx, ky) * 2
         self.graphics_view.scale(k, k)
 
     def draw_line(self, line):
@@ -688,3 +783,30 @@ class MainWindow(QMainWindow):
         pen = QPen(color, 8, Qt.SolidLine)
         self.lines.append(line)
         self.scene.addPath(line, pen)
+
+    def draw_event(self, event, min_x, max_x, min_y, max_y, pen=QPen(Qt.black, 3, Qt.SolidLine),
+                   brush=QBrush(QColor.fromRgb(250, 240, 240))):
+
+        object_event = self.scene.addRect(event.x1, event.y1, event.x2 - event.x1, event.y2 - event.y1, pen, brush)
+
+        text = event.description.split()
+        pre = 0
+        result_text = event.name + '\n\n'
+        for word in text:
+            if pre + len(word) > 50:
+                pre = 0
+                result_text += '\n'
+            pre += len(word) + 1
+            result_text += word + ' '
+
+        object_event.setToolTip(result_text)
+        self.events.append((event, object_event))
+
+        text_event = QGraphicsTextItem(str(event.years))
+        text_event.setPos(event.x1 + 5, event.y1 + 5)
+        font = QFont()
+        font.setBold(False)
+        font.setPixelSize(25)
+        text_event.setFont(font)
+        text_event.setFont(font)
+        self.scene.addItem(text_event)

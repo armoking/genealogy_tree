@@ -34,9 +34,10 @@ class Connections:
         current_index = 0
         name = ''''''
         description = ''''''
+        year = 0
         widget = None
 
-        def __init__(self, x1, y1, w, h, index, name='42', years='yrs', description='''12345'''):
+        def __init__(self, x1, y1, w, h, index=0, name='42', years='yrs', description='''12345'''):
             self.x1 = x1
             self.y1 = y1
             self.x2 = w + self.x1
@@ -53,16 +54,19 @@ class Connections:
             else:
                 self.connections.append((parent_a, parent_b))
 
+    events = []
     graph = []
     lines = []  # QPainterPath
 
     def __init__(self):
         self.graph = []
         self.lines = []
+        self.events = []
 
     def clear(self):
         self.graph = []
         self.lines = []
+        self.events = []
 
     def add_rectangle(self, x1, y1, x2, y2, name='''''', year='''''', history=''''''):
         self.graph.append(self.Rectangle(x1, y1, x2, y2, len(self.graph), name, year, history))
@@ -100,7 +104,7 @@ class Connections:
 
         for rectangle in self.graph:
             for to in rectangle.connections:
-                if len(to) == 1:
+                if len(to) == 1 or to[1] is None:
                     to = to[0]
                     mid_x1 = (rectangle.x1 + rectangle.x2) / 2
                     mid_y1 = (rectangle.y1 + rectangle.y2) / 2
@@ -150,33 +154,35 @@ class Connections:
         depth = [0 for _ in range(data_size)]
         index_of_human = dict((element, index) for index, element in enumerate(data))
 
-        for _ in range(len(data)):
+        changed = True
+        iterations = 0
+        while changed:
+            iterations += 1
+            changed = False
             for index, element in enumerate(data):
                 if element.pair is not None:
-                    depth[index_of_human[element.pair]] = depth[index] = \
-                        max(depth[index], depth[index_of_human[element.pair]])
+                    pair_depth = depth[index_of_human[element.pair]]
+                    if pair_depth > depth[index]:
+                        changed = True
+                        depth[index] = pair_depth
                 for child in element.children:
-                    depth[index_of_human[child]] = max(depth[index_of_human[child]], depth[index] + 1)
-
+                    if depth[index] + 1 > depth[index_of_human[child]]:
+                        changed = True
+                        depth[index_of_human[child]] = max(depth[index_of_human[child]], depth[index] + 1)
+        print('Iterations =', iterations)
         depths_elements = [[] for _ in range(max(depth) + 1)]
 
         for index, element in enumerate(data):
             if element in depths_elements[depth[index]]:
-                current_x = depths_elements[depth[index]].index(element)
-                current_x = 450 * current_x + 50
+                current_x = 450 * depths_elements[depth[index]].index(element) + 50
             else:
-                if element.pair is None:
-                    current_x = len(depths_elements[depth[index]])
-                    current_x = 450 * current_x + 50
-                    depths_elements[depth[index]].append(element)
-                else:
-                    current_x = len(depths_elements[depth[index]])
-                    current_x = 450 * current_x + 50
-                    depths_elements[depth[index]].append(element)
+                current_x = 450 * len(depths_elements[depth[index]]) + 50
+                depths_elements[depth[index]].append(element)
+                if element.pair is not None:
                     depths_elements[depth[index]].append(element.pair)
 
             current_y = depth[index] * 450 + 50
-            self.add_rectangle(current_x, current_y, 300, 150, element.name,
+            self.add_rectangle(current_x, current_y, 400, 150, element.name,
                                '{} - {} yrs'.format(element.year_of_born, element.year_of_death), element.history)
 
         for index, element in enumerate(data):
@@ -189,6 +195,27 @@ class Connections:
                 child_index = index_of_human[child]
                 self.add_connection(child_index, index, pair_index)
         return self.build_lines()
+
+    def generate_events_rectangles(self, min_x, max_x, min_y, max_y, linearly_distributed=True):
+        selected_events = self.events
+        max_year = max(int(event.date) for event in selected_events)
+        min_year = min(int(event.date) for event in selected_events)
+
+        result = []
+        iteration = 0
+        length = len(selected_events)
+
+        for event in selected_events:
+            if linearly_distributed:
+                iteration += 1
+                current_y = iteration / length * (max_y - min_y) - 100
+            else:
+                current_y = (int(event.date) - min_year) / (max_year - min_year) * (max_y - min_y)
+            result.append(
+                Connections.Rectangle(min_x, current_y, max_x - min_x, 50, description=event.description,
+                                      years=event.date, name=event.title))
+
+        return result
 
 
 class TreeGenerator:
