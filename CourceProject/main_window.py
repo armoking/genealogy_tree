@@ -37,12 +37,10 @@ class MainWindow(QMainWindow):
 
         def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
             try:
-                print('here bitch')
                 for element in self.active_elements:
                     element.setBrush(QBrush(QColor.fromRgb(240, 240, 250)))
             except Exception as exception:
                 print('error with a brush in mousePressEvent in MainScene:', exception)
-            print('started')
             try:
                 if event.button() == 2:
                     current_x, current_y = event.scenePos().x(), event.scenePos().y()
@@ -119,15 +117,24 @@ class MainWindow(QMainWindow):
 
         font = QFont('Times')
         font.setPixelSize(20)
+
         change_tree_structure_button = QPushButton('change structure of the tree')
         change_tree_structure_button.setFixedSize(300, 150)
         change_tree_structure_button.setFont(font)
+
+        change_events_structure_button = QPushButton('change structure of events')
+        change_events_structure_button.setFixedSize(300, 150)
+        change_events_structure_button.setFont(font)
+
         rebuild_tree_button = QPushButton('rebuild tree')
         rebuild_tree_button.setFixedSize(300, 150)
         rebuild_tree_button.setFont(font)
+
         database_layout.addWidget(change_tree_structure_button)
+        database_layout.addWidget(change_events_structure_button)
         database_layout.addWidget(rebuild_tree_button)
 
+        change_events_structure_button.clicked.connect(self.change_events_structure)
         change_tree_structure_button.clicked.connect(self.change_tree_structure)
         rebuild_tree_button.clicked.connect(self.rebuild_tree)
 
@@ -139,53 +146,9 @@ class MainWindow(QMainWindow):
         self.remove_element_widget = None
         self.add_connection_widget = None
         self.remove_connection_widget = None
-
-    def recreate(self):
-        super().__init__()
-        self.setWindowTitle('Genealogy tree')
-        self.setGeometry(500, 50, 1000, 900)
-        self.view = QTableView()
-
-        layout = QHBoxLayout()
-
-        w = QWidget(self)
-        w.setLayout(layout)
-
-        self.scene = self.MainScene(self)
-
-        self.graphics_view = QGraphicsView(self.scene)
-        self.graphics_view.setMouseTracking(True)
-        self.graphics_view.setFixedSize(900, 900)
-        self.setMouseTracking(True)
-        self.events = []
-
-        layout.addWidget(self.graphics_view)
-
-        database_layout = QVBoxLayout()
-        layout.addLayout(database_layout)
-
-        font = QFont('Times')
-        font.setPixelSize(20)
-        change_tree_structure_button = QPushButton('change structure of the tree')
-        change_tree_structure_button.setFixedSize(300, 150)
-        change_tree_structure_button.setFont(font)
-        rebuild_tree_button = QPushButton('rebuild tree')
-        rebuild_tree_button.setFixedSize(300, 150)
-        rebuild_tree_button.setFont(font)
-        database_layout.addWidget(change_tree_structure_button)
-        database_layout.addWidget(rebuild_tree_button)
-
-        change_tree_structure_button.clicked.connect(self.change_tree_structure)
-        rebuild_tree_button.clicked.connect(self.rebuild_tree)
-
-        self.setCentralWidget(w)
-
-        self.scale = 1
-        self.db_widget = None
-        self.add_element_widget = None
-        self.remove_element_widget = None
-        self.add_connection_widget = None
-        self.remove_connection_widget = None
+        self.db_widget_events = None
+        self.add_event_widget = None
+        self.remove_event_widget = None
 
     def change_tree_structure(self):
         self.db_widget = QWidget()
@@ -211,6 +174,108 @@ class MainWindow(QMainWindow):
 
         self.db_widget.setLayout(layout)
         self.db_widget.show()
+
+    def change_events_structure(self):
+        self.db_widget_events = QWidget()
+        self.db_widget_events.setGeometry(1000, 200, 400, 100)
+        self.db_widget_events.setWindowTitle('Change structure of events')
+
+        layout = QVBoxLayout()
+
+        add_element_in_data_base = QPushButton('add note')
+        remove_element_from_data_base = QPushButton('del note')
+
+        layout.addWidget(add_element_in_data_base)
+        layout.addWidget(remove_element_from_data_base)
+
+        add_element_in_data_base.clicked.connect(self.add_event_in_data_base)
+        remove_element_from_data_base.clicked.connect(self.remove_event_from_data_base)
+
+        self.db_widget_events.setLayout(layout)
+        self.db_widget_events.show()
+
+    def add_event_in_data_base(self):
+        add_event_widget = QWidget()
+        add_event_widget.setGeometry(1100, 250, 700, 200)
+        add_event_widget.setWindowTitle('Add new event')
+        layout = QVBoxLayout()
+        first_layout = QHBoxLayout()
+        second_layout = QHBoxLayout()
+        layout.addLayout(first_layout)
+        layout.addLayout(second_layout)
+        apply_button = QPushButton('apply')
+
+        apply_button.clicked.connect(self.apply_button_operation_add_event)
+        layout.addWidget(apply_button)
+        for title in ['title', 'description', 'year']:
+            first_layout.addWidget(QLabel(title))
+            second_layout.addWidget(QTextEdit())
+        add_event_widget.setLayout(layout)
+        add_event_widget.show()
+        self.add_event_widget = add_event_widget
+
+    def apply_button_operation_add_event(self):
+        title = self.add_event_widget.layout().itemAt(1).layout().itemAt(0).widget().toPlainText()
+        description = self.add_event_widget.layout().itemAt(1).layout().itemAt(1).widget().toPlainText()
+        year = self.add_event_widget.layout().itemAt(1).layout().itemAt(2).widget().toPlainText()
+
+        if title and description and year:
+            human_and_time_database.TimeEvent.create(title=title, description=description, date=year)
+            self.add_event_widget.close()
+        else:
+            message = QErrorMessage(self)
+            message.setWindowTitle('Input data error')
+            message.showMessage('All fields must be filled')
+
+    def remove_event_from_data_base(self):
+        try:
+            remove_event_widget = QWidget()
+            remove_event_widget.setGeometry(1100, 250, 700, 200)
+            remove_event_widget.setWindowTitle('Del event')
+            layout = QVBoxLayout()
+            first_layout = QHBoxLayout()
+            second_layout = QHBoxLayout()
+            layout.addLayout(first_layout)
+            layout.addLayout(second_layout)
+            apply_button = QPushButton('apply')
+            print('here')
+            apply_button.clicked.connect(self.apply_button_operation_del_event)
+            print('here')
+            layout.addWidget(apply_button)
+            print('here')
+            for title in ['title']:
+                first_layout.addWidget(QLabel(title))
+                second_layout.addWidget(QTextEdit())
+            print('here')
+            remove_event_widget.setLayout(layout)
+            remove_event_widget.show()
+            print('here')
+            self.remove_event_widget = remove_event_widget
+            print('here')
+        except Exception as e:
+            print('here', e)
+
+    def apply_button_operation_del_event(self):
+        try:
+            title = self.remove_event_widget.layout().itemAt(1).layout().itemAt(0).widget().toPlainText()
+            if title:
+                query = human_and_time_database.TimeEvent.select().where(
+                    human_and_time_database.TimeEvent.title == title).limit(1)
+                if len(list(query)) == 1:
+                    human_and_time_database.TimeEvent.delete().where(
+                        (human_and_time_database.TimeEvent.title == query[0].title)
+                    ).execute()
+                    self.remove_event_widget.close()
+                else:
+                    message = QErrorMessage(self)
+                    message.setWindowTitle('Input data error')
+                    message.showMessage('No such node in the tree')
+            else:
+                message = QErrorMessage(self)
+                message.setWindowTitle('Input data error')
+                message.showMessage('All fields must be filled')
+        except Exception as e:
+            print('apply_button_operation_del_element: ', e)
 
     def add_element_in_data_base(self):
         add_element_widget = QWidget()

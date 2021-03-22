@@ -120,7 +120,6 @@ def init_database():
             input_events = inp.read().split('\n')
             for event in input_events:
                 event = event.split(',')
-                print(event)
                 TimeEvent.create(title=event[1], description=event[2], date=event[0])
 
     except Exception as e:
@@ -144,7 +143,6 @@ def build_tree_from_database(main_window):
     main_window.lines = []
     main_window.scene.prev_active_rect = None
 
-    # main_window.recreate()
     connections = Connections()
     human_list = []
     index_of_human = dict()
